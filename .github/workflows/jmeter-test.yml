@@ -1,0 +1,49 @@
+name: JMeter Performance Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      users:
+        description: 'Número de usuarios virtuales (threads)'
+        required: true
+        default: '10'
+        type: string
+
+jobs:
+  run-jmeter-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup JMeter
+        run: |
+          wget https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
+          echo "${PWD}/apache-jmeter-5.6.3/bin" >> $GITHUB_PATH
+
+      - name: Run JMeter Test
+        run: |
+          # Se ejecuta la prueba en modo "No-GUI" (-n), pasando el parámetro de usuarios (-Jthreads)
+          jmeter -n -t mi_prueba.jmx -Jthreads=${{ github.event.inputs.users }} -l resultados.jtl -e -o reporte_html/
+
+      - name: Upload HTML Report Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jmeter-html-report
+          path: reporte_html/
+          
+      - name: Upload Raw Results Artifact (.jtl)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jmeter-raw-results
+          path: resultados.jtl
